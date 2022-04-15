@@ -90,6 +90,7 @@ func (c *Controller) enqueueUpdateSubnet(old, new interface{}) {
 		oldSubnet.Spec.LogicalGateway != newSubnet.Spec.LogicalGateway ||
 		oldSubnet.Spec.Gateway != newSubnet.Spec.Gateway ||
 		!reflect.DeepEqual(oldSubnet.Spec.ExcludeIps, newSubnet.Spec.ExcludeIps) ||
+		oldSubnet.Spec.MulticastSnoopingBehavior != newSubnet.Spec.MulticastSnoopingBehavior ||
 		oldSubnet.Spec.Vlan != newSubnet.Spec.Vlan {
 		klog.V(3).Infof("enqueue update subnet %s", key)
 		c.addOrUpdateSubnetQueue.Add(key)
@@ -622,6 +623,32 @@ func (c *Controller) handleAddOrUpdateSubnet(key string) error {
 			return err
 		}
 		c.patchSubnetStatus(subnet, "ResetLogicalSwitchAclSuccess", "")
+	}
+
+	if subnet.Status.MulticastSnoopingBehavior != subnet.Spec.MulticastSnoopingBehavior {
+		switch subnet.Spec.MulticastSnoopingBehavior {
+		case kubeovnv1.MulticastSnoopingDefault:
+			if err := c.ovnClient.DisableLogicalSwitchIPMulticastSnooping(subnet.Name); err != nil {
+				klog.Errorf("disable ip multicast snooping subnet for %s failed, %v", subnet.Name, err)
+				return err
+			}
+		case kubeovnv1.MulticastSnoopingManual, kubeovnv1.MulticastSnoopingAuto:
+			if err := c.ovnClient.EnableLogicalSwitchIPMulticastSnooping(subnet.Name); err != nil {
+				klog.Errorf("enable ip multicast snooping subnet for %s failed, %v", subnet.Name, err)
+				return err
+			}
+		default:
+		}
+
+		subnet.Status.MulticastSnoopingBehavior = subnet.Spec.MulticastSnoopingBehavior
+		bytes, err := subnet.Status.Bytes()
+		if err != nil {
+			return err
+		}
+		_, err = c.config.KubeOvnClient.KubeovnV1().Subnets().Patch(context.Background(), subnet.Name, types.MergePatchType, bytes, metav1.PatchOptions{}, "status")
+		if err != nil {
+			return err
+		}
 	}
 
 	c.updateVpcStatusQueue.Add(subnet.Spec.Vpc)

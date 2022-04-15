@@ -159,4 +159,7 @@ const (
 	NetemQosLatencyAnnotationTemplate = "%s.kubernetes.io/latency"
 	NetemQosLimitAnnotationTemplate   = "%s.kubernetes.io/limit"
 	NetemQosLossAnnotationTemplate    = "%s.kubernetes.io/loss"
+
+	AllowVirtaulMacsAnnotation         = "ovn.kubernetes.io/allow_vmacs"
+	AllowVirtaulMacsAnnotationTemplate = "%s.kubernetes.io/allow_vmacs"
 )

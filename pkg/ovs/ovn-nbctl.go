@@ -23,6 +23,8 @@ type AclDirection string
 const (
 	SgAclIngressDirection AclDirection = "to-lport"
 	SgAclEgressDirection  AclDirection = "from-lport"
+
+	SpecialAddressUnknown = "unknown"
 )
 
 func (c Client) ovnNbCommand(cmdArgs ...string) (string, error) {
@@ -333,6 +335,81 @@ func (c Client) SetLogicalSwitchConfig(ls, lr, protocol, subnet, gateway string,
 		return err
 	}
 	return nil
+}
+
+func (c Client) EnableLogicalSwitchIPMulticastSnooping(ls string) error {
+	_, err := c.ovnNbCommand("set", "logical_switch", ls, "other_config:mcast_flood=true", "other_config:mcast_flood_unregistered=true")
+	if err != nil {
+		klog.Errorf("enable switch ip multicast snooping %s failed: %v", ls, err)
+		return err
+	}
+
+	return nil
+}
+
+func (c Client) DisableLogicalSwitchIPMulticastSnooping(ls string) error {
+	_, err := c.ovnNbCommand("set", "logical_switch", ls, "other_config:mcast_flood=false", "other_config:mcast_flood_unregistered=false")
+	if err != nil {
+		klog.Errorf("disable switch ip multicast snooping %s failed: %v", ls, err)
+		return err
+	}
+	return nil
+}
+
+func (c Client) logicalSwitchPortGetAddresses(lsp string) ([]string, error) {
+	output, err := c.ovnNbCommand("lsp-get-addresses", lsp)
+	if err != nil {
+		return nil, err
+	}
+
+	return strings.Split(output, "\r"), nil
+}
+
+func (c Client) logicalSwitchPortSetAddresses(lsp string, addresses ...string) error {
+	args := append([]string{"lsp-set-addresses"}, addresses...)
+	_, err := c.ovnNbCommand(args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c Client) LogicalSwitchPortAppendUnknownAddress(lsp string) error {
+	addresses, err := c.logicalSwitchPortGetAddresses(lsp)
+	if err != nil {
+		return err
+	}
+
+	for _, addr := range addresses {
+		if addr == SpecialAddressUnknown {
+			return nil
+		}
+	}
+	addresses = append(addresses, SpecialAddressUnknown)
+	return c.logicalSwitchPortSetAddresses(lsp, addresses...)
+}
+
+func (c Client) LogicalSwitchPortRemoteUnknownAddress(lsp string) error {
+	addresses, err := c.logicalSwitchPortGetAddresses(lsp)
+	if err != nil {
+		return err
+	}
+
+	var foundUnknown bool
+	for i, addr := range addresses {
+		if addr == SpecialAddressUnknown {
+			foundUnknown = true
+			addresses[i] = addresses[len(addresses)-1]
+			addresses = addresses[:len(addresses)-1]
+			break
+		}
+	}
+	if !foundUnknown {
+		return nil
+	}
+	addresses = append(addresses, SpecialAddressUnknown)
+	return c.logicalSwitchPortSetAddresses(lsp, addresses...)
 }
 
 // CreateLogicalSwitch create logical switch in ovn, connect it to router and apply tcp/udp lb rules

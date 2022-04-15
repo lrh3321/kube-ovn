@@ -124,7 +124,23 @@ type SubnetSpec struct {
 	LogicalGateway         bool `json:"logicalGateway"`
 	DisableGatewayCheck    bool `json:"disableGatewayCheck"`
 	DisableInterConnection bool `json:"disableInterConnection"`
+
+	MulticastSnoopingBehavior MulticastSnoopingBehavior `json:"multicastSnoopingBehavior,omitempty"`
 }
+
+// MulticastSnoopingBehavior control IP Multicast Snooping Options
+// other_config:mcast_snoop, other_config:mcast_flood_unregistered
+type MulticastSnoopingBehavior string
+
+const (
+	// MulticastSnoopingDefault remove other_config:mcast_snoop and other_config:mcast_flood_unregistered config
+	MulticastSnoopingDefault = ""
+	// MulticastSnoopingManual Enables IP Multicast Snooping on the logical switch.
+	MulticastSnoopingManual = "manual"
+	// MulticastSnoopingAuto Enables IP Multicast Snooping on the logical switch.
+	// And add `unknown` address to the logical switch port using it.
+	MulticastSnoopingAuto = "auto"
+)
 
 // ConditionType encodes information on the condition
 type ConditionType string
@@ -164,6 +180,8 @@ type SubnetStatus struct {
 	V6AvailableIPs  float64 `json:"v6availableIPs"`
 	V6UsingIPs      float64 `json:"v6usingIPs"`
 	ActivateGateway string  `json:"activateGateway"`
+
+	MulticastSnoopingBehavior MulticastSnoopingBehavior `json:"multicastSnoopingBehavior,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

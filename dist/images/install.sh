@@ -517,6 +517,8 @@ spec:
                         type: string
                       lastTransitionTime:
                         type: string
+                multicastSnoopingBehavior:
+                  type: string
             spec:
               type: object
               properties:
@@ -577,6 +579,8 @@ spec:
                 disableInterConnection:
                   type: boolean
                 htbqos:
+                  type: string
+                multicastSnoopingBehavior:
                   type: string
   scope: Cluster
   names:

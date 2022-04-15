@@ -538,6 +538,23 @@ func (c *Controller) handleAddPod(key string) error {
 				return err
 			}
 
+			var allowVirtaulMacs bool
+			allowVirtaulMacsAnnotationKey := fmt.Sprintf(util.AllowVirtaulMacsAnnotationTemplate, podNet.ProviderName)
+			if subnet.Spec.MulticastSnoopingBehavior == kubeovnv1.MulticastSnoopingAuto {
+				if v, ok := pod.Annotations[allowVirtaulMacsAnnotationKey]; !ok || v != "false" {
+					allowVirtaulMacs = true
+				}
+			} else if subnet.Spec.MulticastSnoopingBehavior == kubeovnv1.MulticastSnoopingManual {
+				allowVirtaulMacs = pod.Annotations[allowVirtaulMacsAnnotationKey] == "true"
+			}
+
+			if allowVirtaulMacs {
+				if err := c.ovnClient.LogicalSwitchPortAppendUnknownAddress(portName); err != nil {
+					c.recorder.Eventf(pod, v1.EventTypeWarning, "CreateOVNPortAppendUnknownAddressFailed", err.Error())
+					return err
+				}
+			}
+
 			if portSecurity {
 				sgNames := strings.Split(securityGroupAnnotation, ",")
 				for _, sgName := range sgNames {

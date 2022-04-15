@@ -136,6 +136,8 @@ spec:
                   type: number
                 v6usingIPs:
                   type: number
+                multicastSnoopingBehavior:
+                  type: string
                 activateGateway:
                   type: string
                 conditions:
@@ -215,6 +217,8 @@ spec:
                 disableInterConnection:
                   type: boolean
                 htbqos:
+                  type: string
+                multicastSnoopingBehavior:
                   type: string
   scope: Cluster
   names:
